@@ -1,0 +1,60 @@
+---
+- name: All hosts up-to-date
+  hosts: local
+  become: true
+  tasks:
+    - name: Full system upgrade
+      community.general.pacman:
+        update_cache: true
+        upgrade: true
+    - name: Install system packages with pacman
+      community.general.pacman:
+        name:
+          - wget
+          - git
+          - gh
+          - fcitx5-im
+          - btop
+          - nautilus
+          - fish
+          - ranger
+          - xclip
+          - python
+          - curl
+          - unzip
+          - ripgrep
+          - procps
+          - gcc
+          - nodejs
+          - lazygit
+          - playerctl
+          - emacs
+          - anki-bin
+          - krita
+          - jdk
+          - qdirstat
+          - efibootmgr
+          - gparted
+          - mangohud
+          - go
+          - openvpn
+          - chromium
+          - file-roller
+          - qpwgraph
+          - scrcpy
+          - sqlitebrowser
+          - clang
+          - cmake
+          - ninja
+        state: present
+
+    - name: Install AUR packages with yay
+      aur:
+        name:
+          - vscodium
+          - heroic
+          - gwe
+          - floorp
+          - protonvpn-gui
+        state: present
+        use: yay
