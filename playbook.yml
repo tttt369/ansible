@@ -3,17 +3,46 @@
   hosts: local
   become: true
   tasks:
-    - name: Full system upgrade
+    - name: Create aur_builder user for AUR operations
+      user:
+        name: aur_builder
+        state: present
+
+    - name: Allow aur_builder to run pacman without password
+      lineinfile:
+        path: /etc/sudoers.d/aur_builder-allow-to-sudo-pacman
+        state: present
+        line: 'aur_builder ALL=(ALL) NOPASSWD: /usr/bin/pacman'
+        validate: '/usr/sbin/visudo -cf %s'
+        create: yes
+
+    - name: Ensure [multilib] section exists in pacman.conf
+      become: true
+      ansible.builtin.blockinfile:
+        path: /etc/pacman.conf
+        block: |
+          [multilib]
+          Include = /etc/pacman.d/mirrorlist
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - multilib"
+        insertafter: EOF
+        create: false
+      register: multilib_section
+
+    - name: Synchronize pacman database
+      become: true
       community.general.pacman:
         update_cache: true
-        upgrade: true
+      when: multilib_section.changed
+
     - name: Install system packages with pacman
       community.general.pacman:
         name:
-          - wget
+          - base-devel
           - git
-          - gh
+          - wget
+          - github-cli
           - fcitx5-im
+          - fcitx5-mozc
           - btop
           - nautilus
           - fish
@@ -29,10 +58,8 @@
           - lazygit
           - playerctl
           - emacs
-          - anki-bin
           - krita
-          - jdk
-          - qdirstat
+          - jdk-openjdk
           - efibootmgr
           - gparted
           - mangohud
@@ -46,15 +73,259 @@
           - clang
           - cmake
           - ninja
+          - proton-vpn-gtk-app
+          - ttf-jetbrains-mono-nerd
+          - noto-fonts-cjk
+          - android-tools
+          - openvpn
+          - wireguard-tools
+          - networkmanager
+          - network-manager-applet
+          - ttf-liberation
+          - steam
+          - nvidia-open-dkms
+          - linux-headers
+          - gamemode
+          - lib32-gamemode
+          - copyq
         state: present
 
     - name: Install AUR packages with yay
-      aur:
+      become: yes
+      become_user: aur_builder
+      kewlfft.aur.aur:
         name:
-          - vscodium
-          - heroic
+          - vscodium-bin
+          - heroic-games-launcher-bin
           - gwe
-          - floorp
-          - protonvpn-gui
+          - floorp-bin
+          - anki-bin
+          - qdirstat-bin
+          - sunshine
         state: present
         use: yay
+
+    - name: Install PipeWire and related packages
+      community.general.pacman:
+        name:
+          - pipewire
+          - pipewire-pulse
+          - pipewire-audio
+          - wireplumber
+        state: present
+        update_cache: true
+
+    - name: Ensure PipeWire and WirePlumber services are enabled for the user
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: true
+        scope: user
+        state: started
+      loop:
+        - pipewire.service
+        - pipewire-pulse.service
+        - wireplumber.service
+      become: false
+      become_user: "{{ ansible_user_id }}"
+
+    - name: Create PipeWire configuration directory for the user
+      ansible.builtin.file:
+        path: "{{ lookup('env', 'HOME') }}/.config/pipewire/pipewire.conf.d"
+        state: directory
+        mode: '0755'
+      become: false
+      become_user: "{{ ansible_user_id }}"
+
+    - name: Create PipeWire null sink configuration
+      ansible.builtin.copy:
+        content: |
+          context.objects = [
+            {
+              factory = adapter
+              args = {
+                factory.name = support.null-audio-sink
+                node.name = my-sink
+                media.class = Audio/Sink
+                object.linger = true
+                audio.position = [ FL FR ]
+                monitor.channel-volumes = true
+                monitor.passthrough = true
+              }
+            }
+          ]
+        dest: "{{ lookup('env', 'HOME') }}/.config/pipewire/pipewire.conf.d/20-link-null-sink.conf"
+        mode: '0644'
+      become: false
+      become_user: "{{ ansible_user_id }}"
+      notify: Restart PipeWire services
+
+    - name: Add system variable to .xprofile
+      ansible.builtin.lineinfile:
+        path: "{{ lookup('env', 'HOME') }}/.xprofile"
+        line: "{{ item }}"
+        state: present
+        create: yes
+        mode: '0755'
+      loop:
+        - '#!/bin/sh'
+        - 'fcitx5 -d'
+        - 'export GTK_IM_MODULE=fcitx'
+        - 'export QT_IM_MODULE=fcitx'
+        - 'export XMODIFIERS=@im=fcitx'
+        - 'export EDITOR=nvim'
+      become: false
+      become_user: "{{ ansible_user_id }}"
+
+    - name: Add system variable to .bashrc
+      blockinfile:
+        path: "{{ lookup('env', 'HOME') }}/.bashrc"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
+        block: |
+          if [[ $(ps --no-header --pid=$PPID --format=comm) != "fish" && -z "${BASH_EXECUTION_STRING}" ]]; then
+            shopt -q login_shell && LOGIN_OPTION='--login' || LOGIN_OPTION=""
+            exec /usr/bin/fish $LOGIN_OPTION
+          fi
+        state: present
+
+    - name: Execute nvidia-xconfig
+      ansible.builtin.command: nvidia-xconfig
+      become: yes
+      # backupの意味がなくなる
+
+    - name: Enable and start NetworkManager
+      ansible.builtin.systemd_service:
+        name: NetworkManager.service
+        enabled: true
+        state: started
+
+    - name: Create nvidia-tdp.service unit file
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Set NVIDIA power limit
+
+          [Service]
+          Type=oneshot
+          ExecStartPre=/usr/bin/nvidia-smi -pm 1
+          ExecStart=/usr/bin/nvidia-smi -pl 100
+        dest: /etc/systemd/system/nvidia-tdp.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload systemd
+
+    - name: Create nvidia-tdp.timer unit file
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Timer for setting NVIDIA power limit
+
+          [Timer]
+          OnBootSec=5
+          Unit=nvidia-tdp.service
+
+          [Install]
+          WantedBy=timers.target
+        dest: /etc/systemd/system/nvidia-tdp.timer
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reload systemd
+
+    - name: Enable and start nvidia-tdp.timer
+      ansible.builtin.systemd:
+        name: nvidia-tdp.timer
+        enabled: yes
+        state: started
+
+    - name: Add user asdf to gamemode group
+      user:
+        name: asdf
+        groups: gamemode
+        append: yes
+      become: yes
+
+    - name: Change CPU governor to performance for all cores
+      shell: echo "performance" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+      become: yes
+      register: result
+      changed_when: result.rc == 0
+
+    - name: Ensure mount point directory exists
+      file:
+        path: /run/media/asdf/49538b9d-fe29-460b-a955-6edece14ec80
+        state: directory
+        owner: asdf
+        group: users
+        mode: '0755'
+      become: yes
+
+    - name: Ensure ext4 filesystem is mounted
+      mount:
+        path: /run/media/asdf/49538b9d-fe29-460b-a955-6edece14ec80
+        src: UUID=49538b9d-fe29-460b-a955-6edece14ec80
+        fstype: ext4
+        opts: defaults
+        state: mounted
+      become: yes
+
+    - name: Create gwe autostart desktop entry
+      copy:
+        dest: /etc/xdg/autostart/gwe.desktop
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Name=GreenWithEnvy
+          Exec=sh -c "sleep 3 && gwe"
+          Hidden=false
+          NoDisplay=false
+          X-GNOME-Autostart-enabled=true
+        mode: '0644'
+      become: yes
+
+    - name: Create CopyQ autostart desktop entry
+      copy:
+        dest: /etc/xdg/autostart/copyq.desktop
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Name=CopyQ
+          Exec=copyq
+          Hidden=false
+          NoDisplay=false
+          X-GNOME-Autostart-enabled=true
+          Comment=Clipboard manager with advanced features
+        mode: '0644'
+      become: yes
+
+    - name: Create sunshine autostart desktop entry
+      copy:
+        dest: /etc/xdg/autostart/sunshine.desktop
+        content: |
+          [Desktop Entry]
+          Type=Application
+          Name=Sunshine
+          Exec=sunshine
+          Hidden=false
+          NoDisplay=false
+          X-GNOME-Autostart-enabled=true
+          Comment=Clipboard manager with advanced features
+        mode: '0644'
+      become: yes
+
+  handlers:
+    - name: Restart PipeWire services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: restarted
+        scope: user
+      loop:
+        - pipewire.service
+        - pipewire-pulse.service
+        - wireplumber.service
+      become: false
+      become_user: "{{ ansible_user_id }}"
+
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: yes
