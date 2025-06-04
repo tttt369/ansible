@@ -102,6 +102,13 @@
           - anki-bin
           - qdirstat-bin
           - sunshine
+          - flutter
+          - dart
+          - android-sdk
+          - android-sdk-platform-tools
+          - android-sdk-cmdline-tools-latest
+          - android-sdk-build-tools-35
+          - android-platform-35
         state: present
         use: yay
 
