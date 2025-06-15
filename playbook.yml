@@ -88,6 +88,10 @@
           - gamemode
           - lib32-gamemode
           - copyq
+          - python-pynvim
+          - tree
+          - kitty
+          - python-pip
         state: present
 
     - name: Install AUR packages with yay
@@ -109,6 +113,7 @@
           - android-sdk-cmdline-tools-latest
           - android-sdk-build-tools-35
           - android-platform-35
+          - jdownloader2
         state: present
         use: yay
 
@@ -179,7 +184,6 @@
         - 'export GTK_IM_MODULE=fcitx'
         - 'export QT_IM_MODULE=fcitx'
         - 'export XMODIFIERS=@im=fcitx'
-        - 'export EDITOR=nvim'
       become: false
       become_user: "{{ ansible_user_id }}"
 
@@ -193,6 +197,15 @@
             exec /usr/bin/fish $LOGIN_OPTION
           fi
         state: present
+
+    - name: Ensure EDITOR is set in /etc/environment
+      ansible.builtin.lineinfile:
+        path: /etc/environment
+        line: 'EDITOR=nvim'
+        state: present
+        create: yes
+      register: env_result
+      changed_when: env_result.changed
 
     - name: Execute nvidia-xconfig
       ansible.builtin.command: nvidia-xconfig
@@ -312,13 +325,43 @@
           [Desktop Entry]
           Type=Application
           Name=Sunshine
-          Exec=sunshine
+          Exec=sh -c "sleep 3 && sunshine"
           Hidden=false
           NoDisplay=false
           X-GNOME-Autostart-enabled=true
           Comment=Clipboard manager with advanced features
         mode: '0644'
       become: yes
+
+    - name: Change ownership of /opt/android-sdk
+      ansible.builtin.file:
+        path: /usr/lib/flutter
+        owner: asdf
+        group: asdf
+        recurse: yes
+        state: directory
+      register: android_sdk_result
+      failed_when: flutter.failed and 'No such file or directory' not in android_sdk_result.msg
+
+    - name: Change ownership of /opt/android-sdk
+      ansible.builtin.file:
+        path: /opt/android-sdk
+        owner: asdf
+        group: asdf
+        recurse: yes
+        state: directory
+      register: android_sdk_result
+      failed_when: android_sdk_result.failed and 'No such file or directory' not in android_sdk_result.msg
+
+    - name: Change ownership of /opt/dart-sdk
+      ansible.builtin.file:
+        path: /opt/dart-sdk
+        owner: asdf
+        group: asdf
+        recurse: yes
+        state: directory
+      register: dart_sdk_result
+      failed_when: dart_sdk_result.failed and 'No such file or directory' not in dart_sdk_result.msg
 
   handlers:
     - name: Restart PipeWire services
