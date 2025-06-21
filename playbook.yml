@@ -2,6 +2,82 @@
 - name: All hosts up-to-date
   hosts: local
   become: true
+  vars:
+    user: "{{ lookup('env', 'USER') }}"
+    pacman:
+      - base-devel
+      - git
+      - wget
+      - github-cli
+      - fcitx5-im
+      - fcitx5-mozc
+      - btop
+      - nautilus
+      - fish
+      - ranger
+      - xclip
+      - python
+      - curl
+      - unzip
+      - ripgrep
+      - procps
+      - gcc
+      - nodejs
+      - lazygit
+      - playerctl
+      - emacs
+      - krita
+      - jdk-openjdk
+      - efibootmgr
+      - gparted
+      - mangohud
+      - go
+      - openvpn
+      - chromium
+      - file-roller
+      - qpwgraph
+      - scrcpy
+      - sqlitebrowser
+      - clang
+      - cmake
+      - ninja
+      - proton-vpn-gtk-app
+      - ttf-jetbrains-mono-nerd
+      - noto-fonts-cjk
+      - android-tools
+      - openvpn
+      - wireguard-tools
+      - networkmanager
+      - network-manager-applet
+      - ttf-liberation
+      - linux-headers
+      - copyq
+      - python-pynvim
+      - tree
+      - kitty
+      - python-pip
+      - wine-staging
+      - firejail
+      - firetools
+      - pipewire
+      - pipewire-pulse
+      - pipewire-audio
+      - wireplumber
+      - cpupower
+    aur:
+      - vscodium-bin
+      - floorp-bin
+      - anki-bin
+      - qdirstat-bin
+      - sunshine
+      - flutter
+      - dart
+      - android-sdk
+      - android-sdk-platform-tools
+      - android-sdk-cmdline-tools-latest
+      - android-sdk-build-tools-35
+      - android-platform-35
+      - jdownloader2
   tasks:
     - name: Create aur_builder user for AUR operations
       user:
@@ -17,7 +93,6 @@
         create: yes
 
     - name: Ensure [multilib] section exists in pacman.conf
-      become: true
       ansible.builtin.blockinfile:
         path: /etc/pacman.conf
         block: |
@@ -34,98 +109,42 @@
         update_cache: true
       when: multilib_section.changed
 
-    - name: Install system packages with pacman
+    - name: Install package"
       community.general.pacman:
-        name:
-          - base-devel
-          - git
-          - wget
-          - github-cli
-          - fcitx5-im
-          - fcitx5-mozc
-          - btop
-          - nautilus
-          - fish
-          - ranger
-          - xclip
-          - python
-          - curl
-          - unzip
-          - ripgrep
-          - procps
-          - gcc
-          - nodejs
-          - lazygit
-          - playerctl
-          - emacs
-          - krita
-          - jdk-openjdk
-          - efibootmgr
-          - gparted
-          - mangohud
-          - go
-          - openvpn
-          - chromium
-          - file-roller
-          - qpwgraph
-          - scrcpy
-          - sqlitebrowser
-          - clang
-          - cmake
-          - ninja
-          - proton-vpn-gtk-app
-          - ttf-jetbrains-mono-nerd
-          - noto-fonts-cjk
-          - android-tools
-          - openvpn
-          - wireguard-tools
-          - networkmanager
-          - network-manager-applet
-          - ttf-liberation
-          - steam
-          - nvidia-open-dkms
-          - linux-headers
-          - gamemode
-          - lib32-gamemode
-          - copyq
-          - python-pynvim
-          - tree
-          - kitty
-          - python-pip
+        name: "{{ pacman }}"
         state: present
 
-    - name: Install AUR packages with yay
-      become: yes
-      become_user: aur_builder
-      kewlfft.aur.aur:
-        name:
-          - vscodium-bin
-          - heroic-games-launcher-bin
-          - gwe
-          - floorp-bin
-          - anki-bin
-          - qdirstat-bin
-          - sunshine
-          - flutter
-          - dart
-          - android-sdk
-          - android-sdk-platform-tools
-          - android-sdk-cmdline-tools-latest
-          - android-sdk-build-tools-35
-          - android-platform-35
-          - jdownloader2
-        state: present
-        use: yay
+    - name: Install aur packages
+      include_tasks:
+        file: install_aurpackages.yml
+        apply:
+          become: yes
+          become_user: aur_builder
+      loop: "{{ aur }}"
 
-    - name: Install PipeWire and related packages
-      community.general.pacman:
-        name:
-          - pipewire
-          - pipewire-pulse
-          - pipewire-audio
-          - wireplumber
-        state: present
-        update_cache: true
+    - name: Install Android NDK version 26.3.11579264 if not present
+      block:
+        - name: Check if NDK source.properties exists
+          ansible.builtin.stat:
+            path: /opt/android-sdk/ndk/26.3.11579264/source.properties
+          register: ndk_stat
+
+        # バージョンが固定されているのは問題である可能性がある
+        - name: Install NDK if source.properties is missing
+          ansible.builtin.command:
+            cmd: /opt/android-sdk/cmdline-tools/latest/bin/sdkmanager "ndk;26.3.11579264"
+          when: not ndk_stat.stat.exists
+          register: sdkmanager_result
+          changed_when: sdkmanager_result.rc == 0
+
+        - name: Ensure correct ownership of NDK directory
+          ansible.builtin.file:
+            path: /opt/android-sdk/ndk/26.3.11579264
+            owner: "{{ user }}"
+            group: "{{ user }}"
+            recurse: yes
+            state: directory
+          when: sdkmanager_result.changed
 
     - name: Ensure PipeWire and WirePlumber services are enabled for the user
       ansible.builtin.systemd:
@@ -138,15 +157,16 @@
         - pipewire-pulse.service
         - wireplumber.service
       become: false
-      become_user: "{{ ansible_user_id }}"
+      become_user: "{{ user }}"
 
+    #設定がある場合スキップすることで高速化可能
     - name: Create PipeWire configuration directory for the user
       ansible.builtin.file:
-        path: "{{ lookup('env', 'HOME') }}/.config/pipewire/pipewire.conf.d"
+        path: "/home/{{ user }}/.config/pipewire/pipewire.conf.d"
         state: directory
         mode: '0755'
       become: false
-      become_user: "{{ ansible_user_id }}"
+      become_user: "{{ user }}"
 
     - name: Create PipeWire null sink configuration
       ansible.builtin.copy:
@@ -165,15 +185,15 @@
               }
             }
           ]
-        dest: "{{ lookup('env', 'HOME') }}/.config/pipewire/pipewire.conf.d/20-link-null-sink.conf"
+        dest: "/home/{{ user }}/.config/pipewire/pipewire.conf.d/20-link-null-sink.conf"
         mode: '0644'
       become: false
-      become_user: "{{ ansible_user_id }}"
+      become_user: "{{ user }}"
       notify: Restart PipeWire services
 
     - name: Add system variable to .xprofile
       ansible.builtin.lineinfile:
-        path: "{{ lookup('env', 'HOME') }}/.xprofile"
+        path: "/home/{{ user }}/.xprofile"
         line: "{{ item }}"
         state: present
         create: yes
@@ -185,11 +205,11 @@
         - 'export QT_IM_MODULE=fcitx'
         - 'export XMODIFIERS=@im=fcitx'
       become: false
-      become_user: "{{ ansible_user_id }}"
+      become_user: "{{ user }}"
 
     - name: Add system variable to .bashrc
       blockinfile:
-        path: "{{ lookup('env', 'HOME') }}/.bashrc"
+        path: "/home/{{ user }}/.bashrc"
         marker: "# {mark} ANSIBLE MANAGED BLOCK"
         block: |
           if [[ $(ps --no-header --pid=$PPID --format=comm) != "fish" && -z "${BASH_EXECUTION_STRING}" ]]; then
@@ -207,101 +227,18 @@
       register: env_result
       changed_when: env_result.changed
 
-    - name: Execute nvidia-xconfig
-      ansible.builtin.command: nvidia-xconfig
-      become: yes
-      # backupの意味がなくなる
-
     - name: Enable and start NetworkManager
       ansible.builtin.systemd_service:
         name: NetworkManager.service
         enabled: true
         state: started
 
-    - name: Create nvidia-tdp.service unit file
-      ansible.builtin.copy:
-        content: |
-          [Unit]
-          Description=Set NVIDIA power limit
-
-          [Service]
-          Type=oneshot
-          ExecStartPre=/usr/bin/nvidia-smi -pm 1
-          ExecStart=/usr/bin/nvidia-smi -pl 100
-        dest: /etc/systemd/system/nvidia-tdp.service
-        owner: root
-        group: root
-        mode: '0644'
-      notify: Reload systemd
-
-    - name: Create nvidia-tdp.timer unit file
-      ansible.builtin.copy:
-        content: |
-          [Unit]
-          Description=Timer for setting NVIDIA power limit
-
-          [Timer]
-          OnBootSec=5
-          Unit=nvidia-tdp.service
-
-          [Install]
-          WantedBy=timers.target
-        dest: /etc/systemd/system/nvidia-tdp.timer
-        owner: root
-        group: root
-        mode: '0644'
-      notify: Reload systemd
-
-    - name: Enable and start nvidia-tdp.timer
-      ansible.builtin.systemd:
-        name: nvidia-tdp.timer
-        enabled: yes
-        state: started
-
-    - name: Add user asdf to gamemode group
-      user:
-        name: asdf
-        groups: gamemode
-        append: yes
-      become: yes
-
     - name: Change CPU governor to performance for all cores
-      shell: echo "performance" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-      become: yes
-      register: result
-      changed_when: result.rc == 0
-
-    - name: Ensure mount point directory exists
-      file:
-        path: /run/media/asdf/49538b9d-fe29-460b-a955-6edece14ec80
-        state: directory
-        owner: asdf
-        group: users
-        mode: '0755'
-      become: yes
-
-    - name: Ensure ext4 filesystem is mounted
-      mount:
-        path: /run/media/asdf/49538b9d-fe29-460b-a955-6edece14ec80
-        src: UUID=49538b9d-fe29-460b-a955-6edece14ec80
-        fstype: ext4
-        opts: defaults
-        state: mounted
-      become: yes
-
-    - name: Create gwe autostart desktop entry
-      copy:
-        dest: /etc/xdg/autostart/gwe.desktop
-        content: |
-          [Desktop Entry]
-          Type=Application
-          Name=GreenWithEnvy
-          Exec=sh -c "sleep 3 && gwe"
-          Hidden=false
-          NoDisplay=false
-          X-GNOME-Autostart-enabled=true
-        mode: '0644'
-      become: yes
+      lineinfile:
+        path: /etc/default/cpupower
+        state: present
+        line: 'governor=performance'
+        create: yes
 
     - name: Create CopyQ autostart desktop entry
       copy:
@@ -317,6 +254,7 @@
           Comment=Clipboard manager with advanced features
         mode: '0644'
       become: yes
+      state: present
 
     - name: Create sunshine autostart desktop entry
       copy:
@@ -332,34 +270,51 @@
           Comment=Clipboard manager with advanced features
         mode: '0644'
       become: yes
+      state: present
 
-    - name: Change ownership of /opt/android-sdk
+    - name: Check ownership of /opt/flutter
+      ansible.builtin.stat:
+        path: /opt/flutter
+      register: flutter_stat
+    - name: Check ownership of /opt/android-sdk
+      ansible.builtin.stat:
+        path: /opt/android-sdk
+      register: android-sdk_stat
+    - name: Check ownership of /opt/dart-sdk
+      ansible.builtin.stat:
+        path: /opt/dart-sdk
+      register: dart-sdk_stat
+
+    - name: Change ownership of /opt/flutter
       ansible.builtin.file:
-        path: /usr/lib/flutter
-        owner: asdf
-        group: asdf
+        path: /opt/flutter
+        owner: "{{ user }}"
+        group: "{{ user }}"
         recurse: yes
         state: directory
-      register: android_sdk_result
-      failed_when: flutter.failed and 'No such file or directory' not in android_sdk_result.msg
+      when: (flutter_stat.stat.uid != lookup('ansible.builtin.user', user, 'uid')
+      register: flutter_bin_result
+      failed_when: flutter_bin_result.failed and 'No such file or directory' not in flutter_bin_result.msg
 
     - name: Change ownership of /opt/android-sdk
       ansible.builtin.file:
         path: /opt/android-sdk
-        owner: asdf
-        group: asdf
+        owner: "{{ user }}"
+        group: "{{ user }}"
         recurse: yes
         state: directory
+      when: (android-sdk_stat.stat.uid != lookup('ansible.builtin.user', user, 'uid')
       register: android_sdk_result
       failed_when: android_sdk_result.failed and 'No such file or directory' not in android_sdk_result.msg
 
     - name: Change ownership of /opt/dart-sdk
       ansible.builtin.file:
         path: /opt/dart-sdk
-        owner: asdf
-        group: asdf
+        owner: "{{ user }}"
+        group: "{{ user }}"
         recurse: yes
         state: directory
+      when: (dart-sdk_stat.stat.uid != lookup('ansible.builtin.user', user, 'uid')
       register: dart_sdk_result
       failed_when: dart_sdk_result.failed and 'No such file or directory' not in dart_sdk_result.msg
 
@@ -374,7 +329,7 @@
         - pipewire-pulse.service
         - wireplumber.service
       become: false
-      become_user: "{{ ansible_user_id }}"
+      become_user: "{{ user }}"
 
     - name: Reload systemd
       ansible.builtin.systemd:

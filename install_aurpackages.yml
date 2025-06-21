@@ -1,0 +1,15 @@
+# - name: Display processing package
+#   ansible.builtin.debug:
+#     msg: "Processing package: {{ item }}"
+#
+# - name: Install "{{ item }}"
+#   community.general.pacman:
+#     name: "{{ item }}"
+#     state: present
+
+- name: Install "{{ item }}"
+  kewlfft.aur.aur:
+    name:
+      - "{{ item }}"
+    state: present
+    use: yay
