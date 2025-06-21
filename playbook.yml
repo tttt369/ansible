@@ -78,7 +78,22 @@
       - android-sdk-build-tools-35
       - android-platform-35
       - jdownloader2
+  pre_tasks:
+    - name: Get user UID and GID
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ user }}"
+      register: user_info
+      failed_when: user_info.ansible_facts.getent_passwd[user] is not defined
+
+    - name: Get user group information
+      ansible.builtin.getent:
+        database: group
+        key: "{{ user }}"
+      register: group_info
+      failed_when: group_info.ansible_facts.getent_group[user] is not defined
   tasks:
+
     - name: Create aur_builder user for AUR operations
       user:
         name: aur_builder
@@ -109,7 +124,7 @@
         update_cache: true
       when: multilib_section.changed
 
-    - name: Install package"
+    - name: Install package
       community.general.pacman:
         name: "{{ pacman }}"
         state: present
@@ -254,7 +269,6 @@
           Comment=Clipboard manager with advanced features
         mode: '0644'
       become: yes
-      state: present
 
     - name: Create sunshine autostart desktop entry
       copy:
@@ -270,7 +284,6 @@
           Comment=Clipboard manager with advanced features
         mode: '0644'
       become: yes
-      state: present
 
     - name: Check ownership of /opt/flutter
       ansible.builtin.stat:
@@ -279,11 +292,11 @@
     - name: Check ownership of /opt/android-sdk
       ansible.builtin.stat:
         path: /opt/android-sdk
-      register: android-sdk_stat
+      register: android_sdk_stat
     - name: Check ownership of /opt/dart-sdk
       ansible.builtin.stat:
         path: /opt/dart-sdk
-      register: dart-sdk_stat
+      register: dart_sdk_stat
 
     - name: Change ownership of /opt/flutter
       ansible.builtin.file:
@@ -292,9 +305,8 @@
         group: "{{ user }}"
         recurse: yes
         state: directory
-      when: (flutter_stat.stat.uid != lookup('ansible.builtin.user', user, 'uid')
-      register: flutter_bin_result
-      failed_when: flutter_bin_result.failed and 'No such file or directory' not in flutter_bin_result.msg
+      when: flutter_stat.stat.uid != (user_info.ansible_facts.getent_passwd[user][2] | int)
+      register: flutter_ownership
 
     - name: Change ownership of /opt/android-sdk
       ansible.builtin.file:
@@ -303,9 +315,8 @@
         group: "{{ user }}"
         recurse: yes
         state: directory
-      when: (android-sdk_stat.stat.uid != lookup('ansible.builtin.user', user, 'uid')
-      register: android_sdk_result
-      failed_when: android_sdk_result.failed and 'No such file or directory' not in android_sdk_result.msg
+      when: android_sdk_stat.stat.uid != (user_info.ansible_facts.getent_passwd[user][2] | int)
+      register: android_sdk_ownership
 
     - name: Change ownership of /opt/dart-sdk
       ansible.builtin.file:
@@ -314,9 +325,8 @@
         group: "{{ user }}"
         recurse: yes
         state: directory
-      when: (dart-sdk_stat.stat.uid != lookup('ansible.builtin.user', user, 'uid')
-      register: dart_sdk_result
-      failed_when: dart_sdk_result.failed and 'No such file or directory' not in dart_sdk_result.msg
+      when: dart_sdk_stat.stat.uid != (user_info.ansible_facts.getent_passwd[user][2] | int)
+      register: dart_sdk_ownership
 
   handlers:
     - name: Restart PipeWire services
