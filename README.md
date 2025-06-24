@@ -1,5 +1,5 @@
-ansible-playbook -i inventory.ini your_playbook.yml -K --limit desktop
+ansible-playbook -i ~/ansible/desktop_hosts ~/ansible/playbook.yml -K
 <br>
 or
 <br>
-ansible-playbook -i inventory.ini your_playbook.yml -K --limit laptop
+ansible-playbook -i ~/ansible/laptop_hosts ~/ansible/playbook.yml -K
