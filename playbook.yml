@@ -1,6 +1,6 @@
 ---
 - name: All hosts up-to-date
-  hosts: local
+  hosts: all
   become: true
   vars:
     user: "{{ lookup('env', 'USER') }}"
@@ -57,27 +57,34 @@
       - kitty
       - python-pip
       - wine-staging
+      - winetricks
       - firejail
-      - firetools
       - pipewire
       - pipewire-pulse
       - pipewire-audio
       - wireplumber
       - cpupower
+    desktop_packages:
+      - steam
+      - nvidia-open-dkms
+      - gamemode
+      - lib32-gamemode
     aur:
       - vscodium-bin
       - floorp-bin
       - anki-bin
       - qdirstat-bin
       - sunshine
-      - flutter
-      - dart
+      - flutter-bin
       - android-sdk
       - android-sdk-platform-tools
       - android-sdk-cmdline-tools-latest
       - android-sdk-build-tools-35
       - android-platform-35
       - jdownloader2
+    desktop_aur:
+      - gwe
+
   pre_tasks:
     - name: Get user UID and GID
       ansible.builtin.getent:
@@ -92,7 +99,11 @@
         key: "{{ user }}"
       register: group_info
       failed_when: group_info.ansible_facts.getent_group[user] is not defined
+
   tasks:
+    - name: Debug group_names
+      ansible.builtin.debug:
+        msg: "Group names for this host: {{ group_names }}"
 
     - name: Create aur_builder user for AUR operations
       user:
@@ -107,7 +118,7 @@
         validate: '/usr/sbin/visudo -cf %s'
         create: yes
 
-    - name: Ensure [multilib] section exists in pacman.conf
+    - name: Ensure [multilib] section exists in /etc/pacman.conf
       ansible.builtin.blockinfile:
         path: /etc/pacman.conf
         block: |
@@ -137,30 +148,6 @@
           become_user: aur_builder
       loop: "{{ aur }}"
 
-    - name: Install Android NDK version 26.3.11579264 if not present
-      block:
-        - name: Check if NDK source.properties exists
-          ansible.builtin.stat:
-            path: /opt/android-sdk/ndk/26.3.11579264/source.properties
-          register: ndk_stat
-
-        # バージョンが固定されているのは問題である可能性がある
-        - name: Install NDK if source.properties is missing
-          ansible.builtin.command:
-            cmd: /opt/android-sdk/cmdline-tools/latest/bin/sdkmanager "ndk;26.3.11579264"
-          when: not ndk_stat.stat.exists
-          register: sdkmanager_result
-          changed_when: sdkmanager_result.rc == 0
-
-        - name: Ensure correct ownership of NDK directory
-          ansible.builtin.file:
-            path: /opt/android-sdk/ndk/26.3.11579264
-            owner: "{{ user }}"
-            group: "{{ user }}"
-            recurse: yes
-            state: directory
-          when: sdkmanager_result.changed
-
     - name: Ensure PipeWire and WirePlumber services are enabled for the user
       ansible.builtin.systemd:
         name: "{{ item }}"
@@ -182,6 +169,7 @@
         mode: '0755'
       become: false
       become_user: "{{ user }}"
+      register: pipewire_config_dir_stat
 
     - name: Create PipeWire null sink configuration
       ansible.builtin.copy:
@@ -205,22 +193,22 @@
       become: false
       become_user: "{{ user }}"
       notify: Restart PipeWire services
+      when: pipewire_config_dir_stat.changed
 
     - name: Add system variable to .xprofile
-      ansible.builtin.lineinfile:
-        path: "/home/{{ user }}/.xprofile"
-        line: "{{ item }}"
-        state: present
-        create: yes
-        mode: '0755'
-      loop:
-        - '#!/bin/sh'
-        - 'fcitx5 -d'
-        - 'export GTK_IM_MODULE=fcitx'
-        - 'export QT_IM_MODULE=fcitx'
-        - 'export XMODIFIERS=@im=fcitx'
       become: false
       become_user: "{{ user }}"
+      ansible.builtin.blockinfile:
+        path: "/home/{{ user }}/.xprofile"
+        block: |
+          #!/bin/sh
+          fcitx5 -d
+          export GTK_IM_MODULE=fcitx
+          export QT_IM_MODULE=fcitx
+          export XMODIFIERS=@im=fcitx
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - .xprofile"
+        insertafter: EOF
+        create: yes
 
     - name: Add system variable to .bashrc
       blockinfile:
@@ -241,12 +229,6 @@
         create: yes
       register: env_result
       changed_when: env_result.changed
-
-    - name: Enable and start NetworkManager
-      ansible.builtin.systemd_service:
-        name: NetworkManager.service
-        enabled: true
-        state: started
 
     - name: Change CPU governor to performance for all cores
       lineinfile:
@@ -289,14 +271,11 @@
       ansible.builtin.stat:
         path: /opt/flutter
       register: flutter_stat
+
     - name: Check ownership of /opt/android-sdk
       ansible.builtin.stat:
         path: /opt/android-sdk
       register: android_sdk_stat
-    - name: Check ownership of /opt/dart-sdk
-      ansible.builtin.stat:
-        path: /opt/dart-sdk
-      register: dart_sdk_stat
 
     - name: Change ownership of /opt/flutter
       ansible.builtin.file:
@@ -318,15 +297,21 @@
       when: android_sdk_stat.stat.uid != (user_info.ansible_facts.getent_passwd[user][2] | int)
       register: android_sdk_ownership
 
-    - name: Change ownership of /opt/dart-sdk
-      ansible.builtin.file:
-        path: /opt/dart-sdk
-        owner: "{{ user }}"
-        group: "{{ user }}"
-        recurse: yes
-        state: directory
-      when: dart_sdk_stat.stat.uid != (user_info.ansible_facts.getent_passwd[user][2] | int)
-      register: dart_sdk_ownership
+    - name: Enable and start NetworkManager
+      ansible.builtin.systemd_service:
+        name: NetworkManager.service
+        enabled: true
+        state: started
+
+    - name: '"INCLUDE DESKTOP ROLE"'
+      ansible.builtin.include_role:
+        name: "desktop"
+      when: "'desktop' in group_names"
+
+    - name: '"INCLUDE LAPTOP ROLE"'
+      ansible.builtin.include_role:
+        name: "laptop"
+      when: "'laptop' in group_names"
 
   handlers:
     - name: Restart PipeWire services
