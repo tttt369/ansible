@@ -1,3 +1,16 @@
+- name: Install desktop packages
+  community.general.pacman:
+    name: "{{ desktop_packages }}"
+    state: present
+
+- name: Install desktop aur packages
+  include_tasks:
+    file: install_aurpackages.yml
+    apply:
+      become: yes
+      become_user: aur_builder
+  loop: "{{ desktop_aur }}"
+
 - name: Check gwe settings
   block:
     - name: Check state of nvidia_tdp_service

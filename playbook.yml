@@ -64,11 +64,16 @@
       - pipewire-audio
       - wireplumber
       - cpupower
+      - fastfetch
     desktop_packages:
       - steam
       - nvidia-open-dkms
       - gamemode
       - lib32-gamemode
+    laptop_packages:
+      - powertop
+      - tlp
+      - thermald
     aur:
       - vscodium-bin
       - floorp-bin
