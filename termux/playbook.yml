@@ -13,7 +13,6 @@
       - fish
       - ranger
       - python
-      - python-pynvim
       - python-pip
       - curl
       - unzip
@@ -26,10 +25,10 @@
       - cmake
       - ninja
       - ttf-jetbrains-mono-nerd
-      - linux-headers
       - tree
       - fastfetch
-
+      - neovim
+      - uv
   pre_tasks:
     - name: Get user UID and GID
       ansible.builtin.getent:
@@ -54,3 +53,15 @@
       community.general.pacman:
         name: "{{ pacman }}"
         state: present
+
+    - name: Add system variable to .bashrc
+      blockinfile:
+        path: "/home/{{ user }}/.bashrc"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
+        block: |
+          if [[ $(ps --no-header --pid=$PPID --format=comm) != "fish" && -z "${BASH_EXECUTION_STRING}" ]]; then
+            shopt -q login_shell && LOGIN_OPTION='--login' || LOGIN_OPTION=""
+            exec /usr/bin/fish $LOGIN_OPTION
+          fi
+        state: present
+        create: true
