@@ -65,6 +65,7 @@
       - wireplumber
       - cpupower
       - fastfetch
+      - kotlin
     desktop_packages:
       - steam
       - nvidia-open-dkms

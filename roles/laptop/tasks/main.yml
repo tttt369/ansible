@@ -1,0 +1,10 @@
+- name: Install laptop package
+  community.general.pacman:
+    name: "{{ laptop_packages }}"
+    state: present
+
+# - name: Enable and start tlp
+#   ansible.builtin.systemd_service:
+#     name: tlp.service
+#     enabled: true
+#     state: started

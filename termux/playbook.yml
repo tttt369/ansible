@@ -1,0 +1,56 @@
+---
+- name: All hosts up-to-date
+  hosts: all
+  become: true
+  vars:
+    user: "{{ lookup('env', 'USER') }}"
+    pacman:
+      - base-devel
+      - git
+      - wget
+      - github-cli
+      - btop
+      - fish
+      - ranger
+      - python
+      - python-pynvim
+      - python-pip
+      - curl
+      - unzip
+      - ripgrep
+      - procps
+      - gcc
+      - nodejs
+      - jdk-openjdk
+      - clang
+      - cmake
+      - ninja
+      - ttf-jetbrains-mono-nerd
+      - linux-headers
+      - tree
+      - fastfetch
+
+  pre_tasks:
+    - name: Get user UID and GID
+      ansible.builtin.getent:
+        database: passwd
+        key: "{{ user }}"
+      register: user_info
+      failed_when: user_info.ansible_facts.getent_passwd[user] is not defined
+
+    - name: Get user group information
+      ansible.builtin.getent:
+        database: group
+        key: "{{ user }}"
+      register: group_info
+      failed_when: group_info.ansible_facts.getent_group[user] is not defined
+
+  tasks:
+    - name: Debug group_names
+      ansible.builtin.debug:
+        msg: "Group names for this host: {{ group_names }}"
+
+    - name: Install package
+      community.general.pacman:
+        name: "{{ pacman }}"
+        state: present
