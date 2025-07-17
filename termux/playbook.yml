@@ -1,9 +1,9 @@
----
 - name: All hosts up-to-date
   hosts: all
   become: true
   vars:
-    user: "{{ lookup('env', 'USER') }}"
+    user: "asdf"
+    user_home: "/home/{{ user }}"
     pacman:
       - base-devel
       - git
@@ -29,34 +29,41 @@
       - fastfetch
       - neovim
       - uv
-  pre_tasks:
-    - name: Get user UID and GID
-      ansible.builtin.getent:
-        database: passwd
-        key: "{{ user }}"
-      register: user_info
-      failed_when: user_info.ansible_facts.getent_passwd[user] is not defined
-
-    - name: Get user group information
-      ansible.builtin.getent:
-        database: group
-        key: "{{ user }}"
-      register: group_info
-      failed_when: group_info.ansible_facts.getent_group[user] is not defined
 
   tasks:
     - name: Debug group_names
       ansible.builtin.debug:
         msg: "Group names for this host: {{ group_names }}"
 
-    - name: Install package
+    - name: Create user {{ user }} if it does not exist
+      ansible.builtin.user:
+        name: "{{ user }}"
+        shell: /usr/bin/fish
+        create_home: true
+        home: "{{ user_home }}"
+        state: present
+
+    - name: Ensure home directory permissions
+      ansible.builtin.file:
+        path: "{{ user_home }}"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: '0700'
+        state: directory
+
+    - name: Install packages
       community.general.pacman:
         name: "{{ pacman }}"
         state: present
+        update_cache: true
+      retries: 3
+      delay: 5
+      register: pacman_result
+      until: pacman_result is success
 
-    - name: Add system variable to .bashrc
-      blockinfile:
-        path: "/home/{{ user }}/.bashrc"
+    - name: Add fish shell configuration to .bashrc
+      ansible.builtin.blockinfile:
+        path: "{{ user_home }}/.bashrc"
         marker: "# {mark} ANSIBLE MANAGED BLOCK"
         block: |
           if [[ $(ps --no-header --pid=$PPID --format=comm) != "fish" && -z "${BASH_EXECUTION_STRING}" ]]; then
@@ -65,3 +72,6 @@
           fi
         state: present
         create: true
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        mode: '0644'
