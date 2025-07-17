@@ -4,4 +4,6 @@ ansible-playbook -i ~/ansible/laptop_hosts ~/ansible/playbook.yml -K
 <br>
 if termux:
 <br>
+proot-distro login archlinux --bind ~/storage:/mnt
+su - asdf
 ansible-playbook -i ~/ansible/termux/hosts ~/ansible/termux/playbook.yml
