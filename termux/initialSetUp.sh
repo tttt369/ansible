@@ -12,7 +12,7 @@ pkg install -y proot-distro neovim
 # Arch Linuxのインストール
 proot-distro install archlinux
 
-cp -r ../ansible ~/storage
+cp -r ~/ansible ~/storage
 
 # Arch Linuxにログインし、ストレージをバインド
 proot-distro login archlinux --bind ~/storage:/mnt
