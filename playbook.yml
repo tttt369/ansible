@@ -155,6 +155,15 @@
           become_user: aur_builder
       loop: "{{ aur }}"
 
+    - name: Create kdeglobals configuration
+      ansible.builtin.blockinfile:
+        path: "/home/{{ user}}/.config/kdeglobals"
+        block: |
+          [General]
+          TerminalApplication=xfce4-terminal
+        insertafter: EOF
+        create: true
+
     - name: Ensure PipeWire and WirePlumber services are enabled for the user
       ansible.builtin.systemd:
         name: "{{ item }}"
