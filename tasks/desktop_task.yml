@@ -77,14 +77,14 @@
   block:
     - name: Ensure mount point directory exists
       file:
-        path: /run/media/"{{ user }}"/49538b9d-fe29-460b-a955-6edece14ec80
+        path: /run/media/{{ user }}/49538b9d-fe29-460b-a955-6edece14ec80
         state: directory
         owner: "{{ user }}"
         group: users
         mode: '0755'
     - name: mount ext4 filesystem
       mount:
-        path: /run/media/"{{ user }}"/49538b9d-fe29-460b-a955-6edece14ec80
+        path: /run/media/{{ user }}/49538b9d-fe29-460b-a955-6edece14ec80
         src: UUID=49538b9d-fe29-460b-a955-6edece14ec80
         fstype: ext4
         opts: defaults

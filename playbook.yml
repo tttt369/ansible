@@ -12,7 +12,7 @@
       - fcitx5-im
       - fcitx5-mozc
       - btop
-      - nautilus
+      - dolphin
       - fish
       - ranger
       - xclip
@@ -66,6 +66,7 @@
       - cpupower
       - fastfetch
       - kotlin
+      - android-file-transfer
     desktop_packages:
       - steam
       - nvidia-open-dkms
@@ -148,7 +149,7 @@
 
     - name: Install aur packages
       include_tasks:
-        file: install_aurpackages.yml
+        file: "{{ playbook_dir }}/tasks/install_aurpackages.yml"
         apply:
           become: yes
           become_user: aur_builder
@@ -310,13 +311,17 @@
         state: started
 
     - name: '"INCLUDE DESKTOP ROLE"'
-      ansible.builtin.include_role:
-        name: "desktop"
+      include_tasks:
+        file: "{{ playbook_dir }}/tasks/desktop_task.yml"
+        apply:
+          become: yes
       when: "'desktop' in group_names"
 
     - name: '"INCLUDE LAPTOP ROLE"'
-      ansible.builtin.include_role:
-        name: "laptop"
+      include_tasks:
+        file: "{{ playbook_dir }}/tasks/laptop_task.yml"
+        apply:
+          become: yes
       when: "'laptop' in group_names"
 
   handlers:
