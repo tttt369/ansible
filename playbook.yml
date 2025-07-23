@@ -91,6 +91,25 @@
       - jdownloader2
     desktop_aur:
       - gwe
+    firefox_extensions:
+      - ublock-origin
+      - auto-tab-discard
+      - zjm-whatfont
+      - view-page-archive
+      - violentmonkey
+      - vimium-ff
+      - videospeed
+      - spoof-geolocation
+      - smart-referer
+      - sidebery
+      - search_by_image
+      - enhancer-for-youtube
+      - darkreader
+      - cors-unblock
+      - buster-captcha-solver
+      - bitwarden-password-manager
+    firefox_system_ext_dir: "{{ playbook_dir }}/dot-config/floorp/extensions"
+    Update_ext: false
 
   pre_tasks:
     - name: Get user UID and GID
@@ -154,6 +173,12 @@
           become: yes
           become_user: aur_builder
       loop: "{{ aur }}"
+
+    - name: Install firefox extensions
+      loop: "{{ firefox_extensions }}"
+      ansible.builtin.include_tasks:
+        file: setup_floorp.yml
+      when: Update_ext
 
     - name: Create kdeglobals configuration
       ansible.builtin.blockinfile:

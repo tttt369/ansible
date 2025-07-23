@@ -1,0 +1,31 @@
+- name: "Call Firefox Addons API for theme info for {{ item }}"
+  ansible.builtin.uri:
+    url: https://addons.mozilla.org/api/v5/addons/addon/{{ item }}
+    return_content: true
+  register: api_call
+
+- name: Parse result for download link
+  ansible.builtin.set_fact:
+    theme_download_link: "{{ api_call.json.current_version.file.url }}"
+
+- name: Parse result for guid
+  ansible.builtin.set_fact:
+    ext_guid: "{{ api_call.json.guid }}"
+
+- name: Print destination path
+  ansible.builtin.debug:
+    msg: "{{ firefox_system_ext_dir }}"
+
+- name: Ensure extensions directory exists
+  ansible.builtin.file:
+    path: "{{ firefox_system_ext_dir }}"
+    state: directory
+    mode: "0755"
+  become_user: "{{ user }}"
+
+- name: Download theme extension file
+  ansible.builtin.get_url:
+    url: "{{ theme_download_link }}"
+    dest: "{{ firefox_system_ext_dir }}/{{ ext_guid }}.xpi"
+    mode: "0644"
+  become_user: "{{ user }}"
