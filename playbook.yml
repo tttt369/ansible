@@ -91,6 +91,7 @@
       - jdownloader2
     desktop_aur:
       - gwe
+      - yabridge-bin
     firefox_extensions:
       - ublock-origin
       - auto-tab-discard
@@ -105,9 +106,10 @@
       - search_by_image
       - enhancer-for-youtube
       - darkreader
-      - cors-unblock
+      - cors-unblock-enable-best
       - buster-captcha-solver
       - bitwarden-password-manager
+      - immersive-translate
     firefox_system_ext_dir: "{{ playbook_dir }}/dot-config/floorp/extensions"
     Update_ext: false
 
