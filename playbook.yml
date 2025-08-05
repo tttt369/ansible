@@ -67,6 +67,7 @@
       - fastfetch
       - kotlin
       - android-file-transfer
+      - nautilus
     desktop_packages:
       - steam
       - nvidia-open-dkms
@@ -111,7 +112,7 @@
       - bitwarden-password-manager
       - immersive-translate
     firefox_system_ext_dir: "{{ playbook_dir }}/dot-config/floorp/extensions"
-    Update_ext: false
+    Update_ext: true
 
   pre_tasks:
     - name: Get user UID and GID
@@ -178,8 +179,11 @@
 
     - name: Install firefox extensions
       loop: "{{ firefox_extensions }}"
-      ansible.builtin.include_tasks:
-        file: setup_floorp.yml
+      include_tasks:
+        file: "{{ playbook_dir }}/tasks/setup_floorp.yml"
+        apply:
+          become: no
+          become_user: "{{ user }}"
       when: Update_ext
 
     - name: Create kdeglobals configuration
