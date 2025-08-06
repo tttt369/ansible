@@ -68,6 +68,7 @@
       - kotlin
       - android-file-transfer
       - nautilus
+      - less
     desktop_packages:
       - steam
       - nvidia-open-dkms
