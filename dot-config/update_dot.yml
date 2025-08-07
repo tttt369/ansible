@@ -1,0 +1,87 @@
+---
+- name: Update dots file
+  hosts: all
+  become: false
+  vars:
+    user: "{{ lookup('env', 'USER') }}"
+
+    xfce: true
+    xfce_dir: "/home/{{ user }}/.config/xfce4/xfconf/xfce-perchannel-xml/"
+    xfce_ans_dir: "{{ playbook_dir }}/xfce4/xfconf/xfce-perchannel-xml/"
+    xfce_file:
+      - xfce4-keyboard-shortcuts.xml
+      - xfce4-panel.xml
+      - xfwm4.xml
+      - xsettings.xml
+
+    copyq: true
+    copyq_dir: "/home/{{ user }}/.config/copyq/"
+    copyq_ans_dir: "{{ playbook_dir }}/copyq/"
+    copyq_file:
+      - copyq-commands.ini
+      - copyq.conf
+
+    fish: true
+    fish_dir: "/home/{{ user }}/.config/fish/"
+    fish_ans_dir: "{{ playbook_dir }}/fish/"
+    fish_file:
+      - config.fish
+      - fish_variables
+
+    gwe: true
+    gwe_dir: "/home/{{ user }}/.config/gwe/"
+    gwe_ans_dir: "{{ playbook_dir }}/gwe/"
+    gwe_file:
+      - gwe.db
+
+    mozc: true
+    mozc_dir: "/home/{{ user }}/.config/mozc/"
+    mozc_ans_dir: "{{ playbook_dir }}/mozc/"
+    mozc_file:
+      - config1.db
+
+    nvim: true
+    nvim_dir: "/home/{{ user }}/.config/nvim/"
+    nvim_ans_dir: "{{ playbook_dir }}/nvim/"
+
+  tasks:
+    - name: Copy xfce4 files
+      copy:
+        src: "{{ xfce_dir }}/{{ item }}"
+        dest: "{{ xfce_ans_dir }}/{{ item }}"
+      loop: "{{ xfce_file }}"
+      when: xfce
+
+    - name: Copy copyq files
+      copy:
+        src: "{{ copyq_dir }}/{{ item }}"
+        dest: "{{ copyq_ans_dir }}/{{ item }}"
+      loop: "{{ copyq_file }}"
+      when: copyq
+
+    - name: Copy fish files
+      copy:
+        src: "{{ fish_dir }}/{{ item }}"
+        dest: "{{ fish_ans_dir }}/{{ item }}"
+      loop: "{{ fish_file }}"
+      when: fish
+
+    - name: Copy gwe files
+      copy:
+        src: "{{ gwe_dir }}/{{ item }}"
+        dest: "{{ gwe_ans_dir }}/{{ item }}"
+      loop: "{{ gwe_file }}"
+      when: gwe
+
+    - name: Copy mozc files
+      copy:
+        src: "{{ mozc_dir }}/{{ item }}"
+        dest: "{{ mozc_ans_dir }}/{{ item }}"
+      loop: "{{ mozc_file }}"
+      when: mozc
+
+    - name: Copy nvim files
+      copy:
+        src: "{{ nvim_dir }}"
+        dest: "{{ nvim_ans_dir }}"
+      when: nvim

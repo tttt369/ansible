@@ -52,20 +52,20 @@
       <property name="&lt;Super&gt;a" type="string" value="xfce4-popup-applicationsmenu"/>
       <property name="&lt;Shift&gt;&lt;Super&gt;a" type="string" value="xfce4-settings-manager"/>
       <property name="&lt;Primary&gt;Escape" type="string" value="xfce4-session-logout --logout"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;Up" type="string" value="/home/asdf/Documents/rotate-normal.sh"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;Right" type="string" value="/home/asdf/Documents/rotate-right.sh"/>
-      <property name="&lt;Primary&gt;&lt;Alt&gt;Left" type="string" value="/home/asdf/Documents/rotate-left.sh"/>
       <property name="&lt;Primary&gt;End" type="string" value="xfce4-screenshooter -w"/>
       <property name="&lt;Shift&gt;&lt;Super&gt;f" type="string" value="thorium-browser"/>
       <property name="&lt;Super&gt;AudioRaiseVolume" type="string" value="playerctl next"/>
       <property name="&lt;Super&gt;AudioLowerVolume" type="string" value="playerctl previous"/>
       <property name="&lt;Super&gt;f" type="string" value="exo-open --launch WebBrowser"/>
       <property name="&lt;Super&gt;t" type="string" value="xfce4-terminal"/>
-      <property name="&lt;Super&gt;c" type="string" value="xfce4-terminal --working-directory /home/asdf/Documents/hitomi/"/>
       <property name="&lt;Super&gt;e" type="string" value="nautilus --new-window"/>
       <property name="&lt;Super&gt;End" type="string" value="python3 /home/asdf/Documents/brightness_down.py"/>
       <property name="&lt;Super&gt;Home" type="string" value="python3 /home/asdf/Documents/brightness_up.py"/>
       <property name="&lt;Primary&gt;&lt;Shift&gt;Escape" type="string" value="xfce4-terminal --command btop"/>
+      <property name="&lt;Super&gt;c" type="string" value="xfce4-terminal --command &quot;nvim /home/asdf/ansible/playbook.yml&quot;"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;Right" type="string" value="xrandr -o right"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;Up" type="string" value="xrandr -o normal"/>
+      <property name="&lt;Primary&gt;&lt;Alt&gt;Left" type="string" value="xrandr -o left"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
