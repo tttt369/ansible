@@ -69,6 +69,7 @@
       - android-file-transfer
       - nautilus
       - less
+      - mpv
     desktop_packages:
       - steam
       - nvidia-open-dkms
