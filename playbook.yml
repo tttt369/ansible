@@ -70,6 +70,7 @@
       - nautilus
       - less
       - mpv
+      - trash-cli
     desktop_packages:
       - steam
       - nvidia-open-dkms
@@ -303,16 +304,20 @@
 
     - name: Create sunshine autostart desktop entry
       copy:
-        dest: /etc/xdg/autostart/sunshine.desktop
+        dest: "/home/{{ user }}/.config/autostart/sunshine.desktop"
         content: |
           [Desktop Entry]
+          Encoding=UTF-8
+          Version=0.9.4
           Type=Application
-          Name=Sunshine
-          Exec=sh -c "sleep 3 && sunshine"
+          Name=sunshine
+          Comment=
+          Exec=sleep 1s && sunshine
+          OnlyShowIn=XFCE;
+          RunHook=0
+          StartupNotify=false
+          Terminal=false
           Hidden=false
-          NoDisplay=false
-          X-GNOME-Autostart-enabled=true
-          Comment=Clipboard manager with advanced features
         mode: '0644'
       become: yes
 
@@ -351,6 +356,25 @@
         name: NetworkManager.service
         enabled: true
         state: started
+    - name: Ensure network directory exists
+      file:
+        path: /etc/systemd/network
+        state: directory
+        owner: "{{ user }}"
+        group: users
+
+    - name: Make config of network
+      ansible.builtin.blockinfile:
+        path: /etc/systemd/network/00-wired.network
+        block: |
+          [Match]
+          Name=enp0s31f6
+
+          [Network]
+          Address=192.168.3.12/24
+          Gateway=192.168.3.1
+          DNS=192.168.3.1
+        create: ture
 
     - name: '"INCLUDE DESKTOP ROLE"'
       include_tasks:
