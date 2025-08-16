@@ -312,7 +312,7 @@
           Type=Application
           Name=sunshine
           Comment=
-          Exec=sleep 1s && sunshine
+          Exec=sh -c "sleep 1 && /usr/bin/sunshine"
           OnlyShowIn=XFCE;
           RunHook=0
           StartupNotify=false
