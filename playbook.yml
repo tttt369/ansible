@@ -312,7 +312,7 @@
           Type=Application
           Name=sunshine
           Comment=
-          Exec=sh -c "sleep 1 && /usr/bin/sunshine"
+          Exec=sh -c "xfce4-terminal --title=MyTerm --command='sunshine' & sleep 1; wmctrl -r "MyTerm" -t 1; wmctrl -s 0"
           OnlyShowIn=XFCE;
           RunHook=0
           StartupNotify=false
