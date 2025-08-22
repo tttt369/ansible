@@ -85,7 +85,7 @@
       - floorp-bin
       - anki-bin
       - qdirstat-bin
-      - sunshine
+      - sunshine-git
       - flutter-bin
       - android-sdk
       - android-sdk-platform-tools
@@ -299,25 +299,6 @@
           NoDisplay=false
           X-GNOME-Autostart-enabled=true
           Comment=Clipboard manager with advanced features
-        mode: '0644'
-      become: yes
-
-    - name: Create sunshine autostart desktop entry
-      copy:
-        dest: "/home/{{ user }}/.config/autostart/sunshine.desktop"
-        content: |
-          [Desktop Entry]
-          Encoding=UTF-8
-          Version=0.9.4
-          Type=Application
-          Name=sunshine
-          Comment=
-          Exec=sh -c "xfce4-terminal --title=MyTerm --command='sunshine' & sleep 1; wmctrl -r "MyTerm" -t 1; wmctrl -s 0"
-          OnlyShowIn=XFCE;
-          RunHook=0
-          StartupNotify=false
-          Terminal=false
-          Hidden=false
         mode: '0644'
       become: yes
 
