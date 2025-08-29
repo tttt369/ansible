@@ -1,0 +1,18 @@
+- name: Process default Wine prefix (.wine)
+  block:
+    - name: Find all files in source directory
+      ansible.builtin.find:
+        paths: "{{ pfix.wine.path }}/drive_c/windows/mono"
+        recurse: yes
+        file_type: file
+      register: source_files
+
+- name: Create symbolic links in "{{ pfix_i.value.path }}" directory
+  ansible.builtin.file:
+    src: "{{ item.path }}"
+    dest: "{{ pfix_i.value.path }}/drive_c/windows/mono/{{ item.path | relpath(pfix.wine.path ~ '/drive_c/windows/mono') }}"
+    state: link
+    force: yes
+  become: true
+  loop: "{{ source_files.files | default([]) }}"
+  when: source_files.files | default([]) | length > 0

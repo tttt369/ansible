@@ -1,0 +1,123 @@
+---
+- name: All hosts up-to-date
+  hosts: all
+  vars:
+    user: "{{ lookup('env', 'USER') }}"
+    pfix:
+      wine:
+        path: "/home/{{ user }}/.wine"
+        pkg: [fakejapanese]
+        replace: false
+      wine32ntashi:
+        path: "/home/{{ user }}/.wine32ntashi"
+        pkg: [fakejapanese]
+        replace: true
+
+  tasks:
+    - name: Check prefix state
+      ansible.builtin.stat:
+        path: "{{ item.value.path }}"
+      register: prefix_stat
+      loop: "{{ pfix | dict2items }}"
+
+    - name: Create default Wine prefix
+      block:
+        - name: Run winecfg in 32-bit wineprefix
+          ansible.builtin.shell: wineboot
+          environment:
+            WINEARCH: win32
+
+        - name: Install packages with winetricks
+          ansible.builtin.shell: winetricks {{ item }}
+          loop: "{{ pfix.wine.pkg }}"
+      when: >
+        prefix_stat.results
+        | selectattr('item.key', 'equalto', 'wine')
+        | map(attribute='stat.exists')
+        | list
+        | first
+        | default(false) == false
+      environment:
+        WINEPREFIX: "{{ pfix.wine.path }}"
+
+    - name: Create ntashi 32-bit Wine prefix (.wine32ntashi) # make sure RIO.ini set to ForceMPG=1 and run as jp local
+      block:
+        - name: Run winecfg in 32-bit wineprefix
+          ansible.builtin.shell: wineboot
+          environment:
+            WINEARCH: win32
+
+        - name: Install packages with winetricks
+          ansible.builtin.shell: winetricks {{ item }}
+          loop: "{{ pfix.wine32ntashi.pkg }}"
+      when: >
+        prefix_stat.results
+        | selectattr('item.key', 'equalto', 'wine32ntashi')
+        | map(attribute='stat.exists')
+        | list
+        | first
+        | default(false) == false
+      environment:
+        WINEPREFIX: "{{ pfix.wine32ntashi.path }}"
+
+    - name: replace duplicate wine files to symbolic links
+      shell: |
+        MONO_SRC_DIR="{{ item.value.path }}/drive_c/windows/mono/mono-2.0"
+        MONO_DST_DIR="{{ pfix.wine.path }}/drive_c/windows/mono/mono-2.0"
+        SYS_SRC_DIR="{{ item.value.path }}/drive_c/windows/system32"
+        SYS_DST_DIR="{{ pfix.wine.path }}/drive_c/windows/system32"
+        FONT_SRC_DIR="{{ item.value.path }}/drive_c/windows/Fonts/"
+        FONT_DST_DIR="{{ pfix.wine.path }}/drive_c/windows/Fonts/"
+
+        rm "{{ item.value.path }}"/drive_c/windows/Installer/*
+        rm "{{ pfix.wine.path }}"/drive_c/windows/Installer/*
+
+        mkdir -p "$MONO_DST_DIR"
+        mkdir -p "$SYS_DST_DIR"
+        mkdir -p "$FONT_DST_DIR"
+
+        find "$MONO_SRC_DIR" -type f -not -type l | while read -r file; do
+          REL_PATH="${file#$MONO_SRC_DIR/}"
+          DST_FILE="$MONO_DST_DIR/$REL_PATH"
+          mkdir -p "$(dirname "$DST_FILE")"
+          if [ ! -f "$DST_FILE" ] || cmp -s "$file" "$DST_FILE"; then
+            cp -p "$file" "$DST_FILE"
+            rm "$file"
+            ln -s "$DST_FILE" "$file"
+            echo "Processed (mono): $file -> $DST_FILE"
+          else
+            echo "Skipped (mono): $file (not identical to $DST_FILE)"
+          fi
+        done
+
+        find "$SYS_SRC_DIR" -maxdepth 1 -type f -not -type l | while read -r file; do
+          FILENAME=$(basename "$file")
+          DST_FILE="$SYS_DST_DIR/$FILENAME"
+          if [ ! -f "$DST_FILE" ] || cmp -s "$file" "$DST_FILE"; then
+            cp -p "$file" "$DST_FILE"
+            rm "$file"
+            ln -s "$DST_FILE" "$file"
+            echo "Processed (system32): $file -> $DST_FILE"
+          else
+            echo "Skipped (system32): $file (not identical to $DST_FILE)"
+          fi
+        done
+
+        find "$FONT_SRC_DIR" -maxdepth 1 -type f -not -type l | while read -r file; do
+          FILENAME=$(basename "$file")
+          DST_FILE="$FONT_DST_DIR/$FILENAME"
+          if [ ! -f "$DST_FILE" ] || cmp -s "$file" "$DST_FILE"; then
+            cp -p "$file" "$DST_FILE"
+            rm "$file"
+            ln -s "$DST_FILE" "$file"
+            echo "Processed font: $file -> $DST_FILE"
+          else
+            echo "Skipped font: $file (not identical to $DST_FILE)"
+          fi
+        done
+
+        echo "All files processed."
+      loop: "{{ pfix | dict2items }}"
+      when: item.value.replace
+      args:
+        executable: /bin/bash

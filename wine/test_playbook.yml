@@ -1,0 +1,32 @@
+- name: All hosts up-to-date
+  hosts: all
+  vars:
+    user: "{{ lookup('env', 'USER') }}"
+    pfix:
+      wine:
+        path: "/home/{{ user }}/.wine"
+        pkg: [fakejapanese]
+        replace: false
+      wine32ntashi:
+        path: "/home/{{ user }}/.wine32ntashi"
+        pkg: [fakejapanese] # - wmp11 - quartz - dxvk - vkd3d
+        replace: true
+
+  tasks:
+    - name: Check prefix state
+      ansible.builtin.stat:
+        path: "{{ item.value.path }}"
+      register: prefix_stat
+      loop: "{{ pfix | dict2items }}"
+
+    - name: Debug when wine32ntashi does not exist
+      ansible.builtin.debug:
+        msg: "wine32ntashi prefix directory ({{ pfix.wine32ntashi.path }}) does not exist!"
+      when: >
+        prefix_stat.results
+        | selectattr('item.key', 'equalto', 'wine32ntashi')
+        | map(attribute='stat.exists')
+        | list
+        | first
+        | default(false) == false
+
