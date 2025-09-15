@@ -1,76 +1,75 @@
----
 - name: All hosts up-to-date
   hosts: all
   vars:
     user: "{{ lookup('env', 'USER') }}"
     pfix:
-      wine:
-        path: "/home/{{ user }}/.wine"
-        pkg: [fakejapanese]
+      wine_default:
+        path: "/home/{{ user }}/.wine_default"
+        pkgs: [fakejapanese]
+        exclude_dlls: []
         replace: false
-      wine32ntashi:
+        annihilate: false
+        re_install: false
+      wine_serum:
+        path: "/home/{{ user }}/.wine_serum"
+        pkgs: [gdiplus]
+        exclude_dlls: [d2d1]
+        replace: false
+        annihilate: false
+        re_install: false
+      wine32ntashi: #use env WINEPREFIX="/home/asdf/.wine32ntashi" LC_ALL=ja_JP.utf8 wine
         path: "/home/{{ user }}/.wine32ntashi"
-        pkg: [fakejapanese]
-        replace: true
+        pkgs: [fakejapanese, quartz]
+        exclude_dlls: []
+        replace: false
+        annihilate: false
+        re_install: false
 
   tasks:
-    - name: Check prefix state
-      ansible.builtin.stat:
-        path: "{{ item.value.path }}"
-      register: prefix_stat
+    - name: Annihilate prefix when annihilate true
+      ansible.builtin.shell: winetricks -f -q annihilate
+      environment:
+        WINEPREFIX: "{{ item.value.path }}"
+      when: item.value.annihilate
       loop: "{{ pfix | dict2items }}"
 
-    - name: Create default Wine prefix
-      block:
-        - name: Run winecfg in 32-bit wineprefix
-          ansible.builtin.shell: wineboot
-          environment:
-            WINEARCH: win32
-
-        - name: Install packages with winetricks
-          ansible.builtin.shell: winetricks {{ item }}
-          loop: "{{ pfix.wine.pkg }}"
-      when: >
-        prefix_stat.results
-        | selectattr('item.key', 'equalto', 'wine')
-        | map(attribute='stat.exists')
-        | list
-        | first
-        | default(false) == false
+    - name: Run winecfg in 32-bit wineprefix
+      ansible.builtin.shell: wineboot
       environment:
-        WINEPREFIX: "{{ pfix.wine.path }}"
+        WINEARCH: win32
+        WINEPREFIX: "{{ item.value.path }}"
+      when: item.value.re_install or not item.value.annihilate
+      loop: "{{ pfix | dict2items }}"
 
-    - name: Create ntashi 32-bit Wine prefix (.wine32ntashi) # make sure RIO.ini set to ForceMPG=1 and run as jp local
-      block:
-        - name: Run winecfg in 32-bit wineprefix
-          ansible.builtin.shell: wineboot
-          environment:
-            WINEARCH: win32
-
-        - name: Install packages with winetricks
-          ansible.builtin.shell: winetricks {{ item }}
-          loop: "{{ pfix.wine32ntashi.pkg }}"
-      when: >
-        prefix_stat.results
-        | selectattr('item.key', 'equalto', 'wine32ntashi')
-        | map(attribute='stat.exists')
-        | list
-        | first
-        | default(false) == false
+    - name: Install packages with winetricks
+      ansible.builtin.shell: "winetricks {{ item.1 }}"
       environment:
-        WINEPREFIX: "{{ pfix.wine32ntashi.path }}"
+        WINEPREFIX: "{{ item.0.value.path }}"
+      loop: "{{ pfix | dict2items | subelements('value.pkgs', skip_missing=True) }}"
+      when:
+        - item.0.value.re_install or not item.0.value.annihilate
+        - item.1 is defined and item.1|length > 0
+
+    - name: Disable selected packages with winetricks
+      ansible.builtin.shell: "winetricks {{ item.1 }}=disabled"
+      environment:
+        WINEPREFIX: "{{ item.0.value.path }}"
+      loop: "{{ pfix | dict2items | subelements('value.exclude_dlls', skip_missing=True) }}"
+      when:
+        - item.0.value.re_install or not item.0.value.annihilate
+        - item.1 is defined and item.1|length > 0
 
     - name: replace duplicate wine files to symbolic links
       shell: |
         MONO_SRC_DIR="{{ item.value.path }}/drive_c/windows/mono/mono-2.0"
-        MONO_DST_DIR="{{ pfix.wine.path }}/drive_c/windows/mono/mono-2.0"
+        MONO_DST_DIR="{{ pfix.default.path }}/drive_c/windows/mono/mono-2.0"
         SYS_SRC_DIR="{{ item.value.path }}/drive_c/windows/system32"
-        SYS_DST_DIR="{{ pfix.wine.path }}/drive_c/windows/system32"
+        SYS_DST_DIR="{{ pfix.default.path }}/drive_c/windows/system32"
         FONT_SRC_DIR="{{ item.value.path }}/drive_c/windows/Fonts/"
-        FONT_DST_DIR="{{ pfix.wine.path }}/drive_c/windows/Fonts/"
+        FONT_DST_DIR="{{ pfix.default.path }}/drive_c/windows/Fonts/"
 
         rm "{{ item.value.path }}"/drive_c/windows/Installer/*
-        rm "{{ pfix.wine.path }}"/drive_c/windows/Installer/*
+        rm "{{ pfix.default.path }}"/drive_c/windows/Installer/*
 
         mkdir -p "$MONO_DST_DIR"
         mkdir -p "$SYS_DST_DIR"

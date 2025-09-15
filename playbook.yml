@@ -76,6 +76,7 @@
       - nvidia-open-dkms
       - gamemode
       - lib32-gamemode
+      - a2jmidid
     laptop_packages:
       - powertop
       - tlp

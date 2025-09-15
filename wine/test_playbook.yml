@@ -1,32 +1,37 @@
-- name: All hosts up-to-date
-  hosts: all
+---
+- hosts: localhost
+  gather_facts: no
   vars:
-    user: "{{ lookup('env', 'USER') }}"
+    user: asdf
     pfix:
       wine:
         path: "/home/{{ user }}/.wine"
         pkg: [fakejapanese]
         replace: false
-      wine32ntashi:
-        path: "/home/{{ user }}/.wine32ntashi"
-        pkg: [fakejapanese] # - wmp11 - quartz - dxvk - vkd3d
-        replace: true
+        annihilate: true
+        re_install: false
+      wine_daw:
+        path: "/home/{{ user }}/.wine_daw"
+        pkg: [gdiplus, a]
+        replace: false
+        annihilate: true
+        re_install: false
 
   tasks:
-    - name: Check prefix state
-      ansible.builtin.stat:
-        path: "{{ item.value.path }}"
-      register: prefix_stat
-      loop: "{{ pfix | dict2items }}"
+    - name: winetricks.log の内容を読み込み
+      ansible.builtin.slurp:
+        src: "{{ pfix.wine_daw.path }}/winetricks.log"
+      register: wine_daw_log
 
-    - name: Debug when wine32ntashi does not exist
+    - name: ログ内容をリスト化
+      set_fact:
+        wine_daw_log_list: "{{ (wine_daw_log.content | b64decode).splitlines() }}"
+
+    - name: デバッグログを出力（差異がある場合のみ）
       ansible.builtin.debug:
-        msg: "wine32ntashi prefix directory ({{ pfix.wine32ntashi.path }}) does not exist!"
-      when: >
-        prefix_stat.results
-        | selectattr('item.key', 'equalto', 'wine32ntashi')
-        | map(attribute='stat.exists')
-        | list
-        | first
-        | default(false) == false
+        msg:
+          - "ログの内容: {{ wine_daw_log_list }}"
+          - "定義されたパッケージ: {{ pfix.wine_daw.pkg }}"
+      when: wine_daw_log_list | difference(pfix.wine_daw.pkg) | length > 0
+            or pfix.wine_daw.pkg | difference(wine_daw_log_list) | length > 0
 
