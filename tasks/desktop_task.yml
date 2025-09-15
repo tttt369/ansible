@@ -16,12 +16,12 @@
     - name: Check state of nvidia_tdp_service
       stat:
         path: /etc/systemd/system/nvidia-tdp.service
-      register: nvidia_tdp_service_stat
+      register: nvidia_tdp_status
 
     - name: Check state of nvidia_tdp_timer
       stat:
         path: /etc/systemd/system/nvidia-tdp.timer
-      register: nvidia_tdp_timer_stat
+      register: nvidia_timer_status
 
 - name: Set gwe settings
   block:
@@ -64,7 +64,7 @@
         name: nvidia-tdp.timer
         enabled: yes
         state: started
-  when: nvidia_tdp_service_stat.changed and nvidia_tdp_timer_stat.changed
+  when: not (nvidia_tdp_status.stat.exists and nvidia_timer_status.stat.exists)
 
 - name: Add user to gamemode group
   user:
