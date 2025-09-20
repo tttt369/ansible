@@ -9,7 +9,6 @@ sudo /system/bin/am force-stop com.android.documentsui
 sudo /system/bin/am force-stop com.android.settings
 sudo /system/bin/am force-stop com.mixexplorer.beta
 sudo /system/bin/am force-stop com.kiwibrowser.browser.dev
-sudo /system/bin/am force-stop com.google.android.inputmethod.latin
 sudo /system/bin/am force-stop org.mozilla.firefox_beta
 sudo /system/bin/am force-stop com.android.chrome
 sudo /system/bin/am force-stop com.aurora.store
