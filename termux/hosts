@@ -1,2 +1,0 @@
-[termux]
-localhost ansible_connection=local
