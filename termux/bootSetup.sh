@@ -17,4 +17,7 @@ sudo /system/bin/am force-stop org.schabi.newpipe
 sudo /system/bin/am force-stop com.metrolist.music
 sudo /system/bin/am force-stop org.mozilla.firefox
 sudo /system/bin/am force-stop app.attestation.auditor
-sudo /system/bin/am force-stop com.ichi2.anki' > ~/.termux/stopApp.sh
+sudo /system/bin/am force-stop com.ichi2.anki' > ~/.termux/boot/stopApp.sh
+
+echo "Change permission"
+sudo chmod 755 ~/.termux/boot/stopApp.sh

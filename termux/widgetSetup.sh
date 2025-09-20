@@ -43,3 +43,7 @@ for package in "${packages[@]}"; do
         echo "$package disabled"
     fi
 done' > ~/.shortcuts/disable_google.sh
+
+echo "Change permission"
+sudo chmod 755 ~/.shortcuts/enable_google.sh
+sudo chmod 755 ~/.shortcuts/disable_google.sh
