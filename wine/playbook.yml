@@ -7,48 +7,68 @@
         path: "/home/{{ user }}/.wine_default"
         pkgs: [fakejapanese]
         exclude_dlls: []
+        install: false
         replace: false
         annihilate: false
-        re_install: false
       wine_serum:
         path: "/home/{{ user }}/.wine_serum"
         pkgs: [gdiplus]
         exclude_dlls: [d2d1]
+        install: false
         replace: false
         annihilate: false
-        re_install: false
       wine32ntashi: #use env WINEPREFIX="/home/asdf/.wine32ntashi" LC_ALL=ja_JP.utf8 wine
         path: "/home/{{ user }}/.wine32ntashi"
         pkgs: [fakejapanese, quartz]
         exclude_dlls: []
+        install: false
         replace: false
         annihilate: false
-        re_install: false
+      wine_stk2:
+        path: "/home/{{ user }}/.wine_stk2"
+        pkgs: [vkd3d, dxvk]
+        exclude_dlls: []
+        install: false
+        replace: false
+        annihilate: false
 
   tasks:
-    - name: Annihilate prefix when annihilate true
+    - name: Check if prefix path exists and is a directory
+      ansible.builtin.stat:
+        path: "{{ item.value.path }}"
+      register: prefix_stats
+      loop: "{{ pfix | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+
+    - name: Annihilate prefix when annihilate true and path is dir
       ansible.builtin.shell: winetricks -f -q annihilate
       environment:
-        WINEPREFIX: "{{ item.value.path }}"
-      when: item.value.annihilate
-      loop: "{{ pfix | dict2items }}"
+        WINEPREFIX: "{{ item.0.value.path }}"
+      when:
+        - item.0.value.annihilate
+        - item.1.stat.isdir | default(false)
+      loop: "{{ pfix | dict2items | zip(prefix_stats.results) | list }}"
+      loop_control:
+        label: "{{ item.0.key }}"
 
-    - name: Run winecfg in 32-bit wineprefix
+    - name: Run wineboot
       ansible.builtin.shell: wineboot
       environment:
-        WINEARCH: win32
         WINEPREFIX: "{{ item.value.path }}"
-      when: item.value.re_install or not item.value.annihilate
+      when: item.value.install and not item.value.annihilate
       loop: "{{ pfix | dict2items }}"
 
     - name: Install packages with winetricks
       ansible.builtin.shell: "winetricks {{ item.1 }}"
       environment:
         WINEPREFIX: "{{ item.0.value.path }}"
-      loop: "{{ pfix | dict2items | subelements('value.pkgs', skip_missing=True) }}"
       when:
-        - item.0.value.re_install or not item.0.value.annihilate
+        - item.0.value.install and not item.0.value.annihilate
         - item.1 is defined and item.1|length > 0
+      loop: "{{ pfix | dict2items | subelements('value.pkgs', skip_missing=True) }}"
+      loop_control:
+        label: "{{ item.0.key }}"
 
     - name: Disable selected packages with winetricks
       ansible.builtin.shell: "winetricks {{ item.1 }}=disabled"
@@ -56,7 +76,7 @@
         WINEPREFIX: "{{ item.0.value.path }}"
       loop: "{{ pfix | dict2items | subelements('value.exclude_dlls', skip_missing=True) }}"
       when:
-        - item.0.value.re_install or not item.0.value.annihilate
+        - item.0.value.install and not item.0.value.annihilate
         - item.1 is defined and item.1|length > 0
 
     - name: replace duplicate wine files to symbolic links
