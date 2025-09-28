@@ -31,7 +31,7 @@ MOZC_FILES="config1.db"
 
 NVIM=true
 NVIM_DIR="/home/$USER/.config/nvim/"
-NVIM_ANS_DIR="./nvim/"
+NVIM_ANS_DIR="./"
 
 # Create destination directories if they don't exist
 mkdir -p "$XFCE_ANS_DIR" "$COPYQ_ANS_DIR" "$FISH_ANS_DIR" "$GWE_ANS_DIR" "$MOZC_ANS_DIR" "$NVIM_ANS_DIR"

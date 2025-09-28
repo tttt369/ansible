@@ -73,6 +73,9 @@
         <value type="string" value="ethernet network connection “wired connection 1” active"/>
       </property>
       <property name="known-items" type="array">
+        <value type="string" value="qpwgraph"/>
+        <value type="string" value="steam"/>
+        <value type="string" value="Strawberry"/>
         <value type="string" value="tray-id"/>
         <value type="string" value="Clipto1"/>
         <value type="string" value="com.leinardi.gwe"/>
@@ -109,7 +112,7 @@
     </property>
     <property name="plugin-7" type="string" value="pulseaudio">
       <property name="enable-keyboard-shortcuts" type="bool" value="true"/>
-      <property name="known-players" type="string" value="Chromium;com.github.th_ch.youtube_music;firefox;firefox-developer-edition;floorp;google-chrome;Spotube;Thorium;vlc;youtube-music"/>
+      <property name="known-players" type="string" value="Chromium;com.github.th_ch.youtube_music;firefox;firefox-developer-edition;floorp;google-chrome;org.strawberrymusicplayer.strawberry;Spotube;Thorium;vlc;youtube-music"/>
     </property>
   </property>
 </channel>

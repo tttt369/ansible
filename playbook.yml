@@ -73,6 +73,7 @@
       - trash-cli
       - uv
       - zip
+      - wmctrl
     desktop_packages:
       - steam
       - nvidia-open-dkms

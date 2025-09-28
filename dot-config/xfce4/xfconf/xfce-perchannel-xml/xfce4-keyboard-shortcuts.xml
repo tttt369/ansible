@@ -66,6 +66,7 @@
       <property name="&lt;Primary&gt;&lt;Alt&gt;Right" type="string" value="xrandr -o right"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;Up" type="string" value="xrandr -o normal"/>
       <property name="&lt;Primary&gt;&lt;Alt&gt;Left" type="string" value="xrandr -o left"/>
+      <property name="&lt;Shift&gt;&lt;Super&gt;q" type="string" value="wmctrl -r :ACTIVE: -b toggle,above"/>
     </property>
   </property>
   <property name="xfwm4" type="empty">
