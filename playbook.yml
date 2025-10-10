@@ -1,7 +1,4 @@
 ---
-- name: All hosts up-to-date
-  hosts: all
-  become: true
   vars:
     user: "{{ lookup('env', 'USER') }}"
     pacman:
@@ -74,6 +71,8 @@
       - uv
       - zip
       - wmctrl
+      - moonlight-qt
+      - unrar
     desktop_packages:
       - steam
       - nvidia-open-dkms

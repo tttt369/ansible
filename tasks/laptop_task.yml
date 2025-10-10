@@ -3,8 +3,14 @@
     name: "{{ laptop_packages }}"
     state: present
 
-# - name: Enable and start tlp
-#   ansible.builtin.systemd_service:
-#     name: tlp.service
-#     enabled: true
-#     state: started
+- name: Enable and start thermald
+  ansible.builtin.systemd_service:
+    name: thermald.service
+    enabled: true
+    state: started
+
+- name: Enable and start auto-cpufreq
+  ansible.builtin.systemd_service:
+    name: auto-cpufreq.service
+    enabled: true
+    state: started
