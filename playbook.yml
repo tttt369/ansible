@@ -73,6 +73,7 @@
       - wmctrl
       - moonlight-qt
       - unrar
+      - rust
     desktop_packages:
       - steam
       - nvidia-open-dkms
