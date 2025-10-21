@@ -31,6 +31,13 @@
         install: false
         replace: false
         annihilate: false
+      wine_trkv:
+        path: "/home/{{ user }}/.wine_trkv"
+        pkgs: [dotnet48, dotnetcoredesktop6, dotnetcoredesktop9, vcredist2022, dotnetdesktop8]
+        exclude_dlls: []
+        install: true
+        replace: false
+        annihilate: false
 
   tasks:
     - name: Check if prefix path exists and is a directory

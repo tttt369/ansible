@@ -74,6 +74,7 @@
       - moonlight-qt
       - unrar
       - rust
+      - xdg-desktop-portal-gtk
     desktop_packages:
       - steam
       - nvidia-open-dkms
