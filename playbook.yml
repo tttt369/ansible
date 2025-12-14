@@ -75,6 +75,7 @@
       - unrar
       - rust
       - xdg-desktop-portal-gtk
+      - pacman-contrib
     desktop_packages:
       - steam
       - nvidia-open-dkms
