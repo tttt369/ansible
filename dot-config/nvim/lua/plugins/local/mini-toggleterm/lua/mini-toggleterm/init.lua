@@ -1,35 +1,78 @@
 local M = {}
+M.terminal_id = {}
+
+local function debug_obj(obj)
+  for k,v in pairs(obj) do
+    print(k .. " => " .. tostring(v))
+  end
+end
 
 local function get_name()
   local fullpath = vim.api.nvim_buf_get_name(0)
-  local filename = vim.fn.fnamemodify(fullpath, ":t")
-  return filename
+  return fullpath
 end
 
-local function get_id()
-  local bufname = vim.api.nvim_buf_get_name(0)  -- 対象バッファの番号を0で現在バッファ
-  local id = bufname:match("term://.-//(%d+):")
-  id = tonumber(id)
-  return id
+local function get_buf_id()
+  local buf_nr = vim.api.nvim_get_current_buf()
+  return buf_nr
 end
 
-M.session = {}
-function M.setup()
-  vim.keymap.set('n', '<leader>t', function()
-    local fname = get_name()
+local function open_terminal()
+  local file = vim.api.nvim_get_current_win()
 
-    vim.cmd('belowright split | terminal')
+  vim.cmd('belowright split | terminal')
 
-    local id = get_id()
+  local terminal = vim.api.nvim_get_current_win()
 
-    M.session[fname] = id
+  table.insert(M.terminal_id, terminal)
+  debug_obj(M.terminal_id)
+end
 
-    for k,v in pairs(M.session) do
-      print(k .. " => " .. tostring(v))
+local function test()
+  local tab = vim.api.nvim_get_current_tabpage()
+  print(tab)
+
+  local tabs = vim.api.nvim_list_tabpages()
+  print(vim.inspect(tabs))
+  for _, tab in ipairs(tabs) do
+    local wins = vim.api.nvim_tabpage_list_wins(tab)
+    print("tab:", tab, "windows:", vim.inspect(wins))
+  end
+end
+
+
+local function toggle_terminal()
+  local current_tab = vim.api.nvim_get_current_tabpage()
+  local all_tabs = vim.api.nvim_list_tabpages()
+
+  local win_obj = {}
+  for _, tab in ipairs(all_tabs) do
+    if (tab == current_tab) then
+      local wins = vim.api.nvim_tabpage_list_wins(tab)
+      win_obj = vim.inspect(wins)
+      print("tab:", tab, "windows:", win_obj)
     end
+  end
 
-  end)
+  local term_id
+  for _, id in ipairs(M.terminal_id) do
+    if (win_obj[id]) then
+      term_id = id
+    end
+  end
+
+
+  if (term_id) then
+    vim.cmd('buffer ' .. term_id)
+    vim.cmd('hide')
+  else
+    open_terminal()
+  end
+
+end
+
+function M.setup()
+  vim.keymap.set('n', '<leader>t', toggle_terminal)
 end
 
 return M
-
