@@ -1,71 +1,92 @@
 local M = {}
-M.terminal_id = {}
+M.file2term = {}
+M.terminal_buf = {}
+M.height = 20
 
-local function debug_obj(obj)
-  for k,v in pairs(obj) do
-    print(k .. " => " .. tostring(v))
-  end
-end
-
-local function get_name()
-  local fullpath = vim.api.nvim_buf_get_name(0)
-  return fullpath
-end
-
-local function get_buf_id()
-  local buf_nr = vim.api.nvim_get_current_buf()
-  return buf_nr
+local function debug_obj(obj) 
+  for k,v in pairs(obj) do 
+    print(k .. ": " .. tostring(v)) 
+  end 
 end
 
 local function open_terminal()
-  local file = vim.api.nvim_get_current_win()
+  local file_buf = vim.api.nvim_get_current_buf()
 
-  vim.cmd('belowright split | terminal')
+  vim.cmd('botright ' .. M.height .. 'split | terminal')
 
-  local terminal = vim.api.nvim_get_current_win()
+  local term_buf = vim.api.nvim_get_current_buf()
 
-  table.insert(M.terminal_id, terminal)
-  debug_obj(M.terminal_id)
+  print("M.file2term")
+  M.file2term[file_buf] = term_buf
+  print(debug_obj(M.file2term))
+
+  print("M.terminal_buf")
+  table.insert(M.terminal_buf, term_buf)
+  print(debug_obj(M.terminal_buf))
 end
 
 local function test()
-  local tab = vim.api.nvim_get_current_tabpage()
-  print(tab)
-
-  local tabs = vim.api.nvim_list_tabpages()
-  print(vim.inspect(tabs))
-  for _, tab in ipairs(tabs) do
-    local wins = vim.api.nvim_tabpage_list_wins(tab)
-    print("tab:", tab, "windows:", vim.inspect(wins))
-  end
 end
 
 
 local function toggle_terminal()
   local current_tab = vim.api.nvim_get_current_tabpage()
-  local all_tabs = vim.api.nvim_list_tabpages()
+  local win_list = vim.api.nvim_tabpage_list_wins(current_tab)
 
-  local win_obj = {}
-  for _, tab in ipairs(all_tabs) do
-    if (tab == current_tab) then
-      local wins = vim.api.nvim_tabpage_list_wins(tab)
-      win_obj = vim.inspect(wins)
-      print("tab:", tab, "windows:", win_obj)
+  local win_obj_buf = {}
+  local win_list_buf = {}
+  for _, win in ipairs(win_list) do
+    buf = vim.api.nvim_win_get_buf(win)
+    table.insert(win_list_buf, buf)
+    win_obj_buf[buf] = true
+  end
+
+  print("win_obj_buf")
+  print(debug_obj(win_obj_buf))
+
+  local term_buf
+  for _, buf in ipairs(M.terminal_buf) do
+    if (#M.file2term == 0) then break end
+    print("loop_buf1", buf)
+    print(debug_obj(M.terminal_buf))
+    if (win_obj_buf[buf]) then
+      print("term_buf", buf)
+      term_buf = buf
+      break
     end
   end
 
-  local term_id
-  for _, id in ipairs(M.terminal_id) do
-    if (win_obj[id]) then
-      term_id = id
+  local past_term_buf
+  for _, id in ipairs(win_list_buf) do
+    if (#M.file2term == 0) then 
+      print("break no term")
+      break
+
+    elseif (term_buf) then 
+      print("break there is term")
+      break
+    end
+
+    print("loop_buf2", buf)
+    if (M.file2term[buf]) then
+      print("past_term_buf", M.file2term[buf])
+      past_term_buf = M.file2term[buf]
+      break
     end
   end
 
+  if (term_buf) then
+    print("if")
+    for k,v in pairs(vim.fn.win_findbuf(term_buf)) do 
+      M.height = vim.api.nvim_win_get_height(v)
+      vim.api.nvim_win_hide(v)
+    end 
 
-  if (term_id) then
-    vim.cmd('buffer ' .. term_id)
-    vim.cmd('hide')
+  elseif (past_term_buf) then
+    print("elseif")
+    vim.cmd('botright ' .. M.height .. 'split | buffer ' .. past_term_buf)
   else
+    print("else")
     open_terminal()
   end
 
